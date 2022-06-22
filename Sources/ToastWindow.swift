@@ -3,8 +3,20 @@ import UIKit
 open class ToastWindow: UIWindow {
   
   // MARK: - Public Property
-
-  public static let shared = ToastWindow(frame: UIScreen.main.bounds, mainWindow: UIApplication.shared.keyWindow)
+    
+  @available(iOS 13.0, *)
+  public static var forgroundActiveWindowScene: UIWindowScene? {
+    UIApplication.shared.connectedScenes
+        .first {
+          $0.activationState == .foregroundActive && $0 is UIWindowScene
+        } as? UIWindowScene
+  }
+    
+  public static var keyWindow: UIWindow? {
+    UIApplication.shared.windows.first(where: \.isKeyWindow)
+  }
+    
+  public static let shared = ToastWindow(frame: UIScreen.main.bounds, mainWindow: ToastWindow.keyWindow)
 
   override open var rootViewController: UIViewController? {
     get {
@@ -13,8 +25,8 @@ open class ToastWindow: UIWindow {
         return nil
       }
       guard !self.isStatusBarOrientationChanging else { return nil }
-      guard let firstWindow = UIApplication.shared.delegate?.window else { return nil }
-      return firstWindow is ToastWindow ? nil : firstWindow?.rootViewController
+      guard let firstWindow = ToastWindow.keyWindow else { return nil }
+      return firstWindow is ToastWindow ? nil : firstWindow.rootViewController
     }
     set { /* Do nothing */ }
   }
@@ -75,7 +87,15 @@ open class ToastWindow: UIWindow {
   // MARK: - Initializing
 
   public init(frame: CGRect, mainWindow: UIWindow?) {
-    super.init(frame: frame)
+    if #available(iOS 13.0, *) {
+      if let windowScene = ToastWindow.forgroundActiveWindowScene {
+        super.init(windowScene: windowScene)
+      } else {
+        super.init(frame: frame)
+      }
+    } else {
+      super.init(frame: frame)
+    }
     self.mainWindow = mainWindow
     self.isUserInteractionEnabled = false
     self.gestureRecognizers = nil
